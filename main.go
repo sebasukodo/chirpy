@@ -1,11 +1,21 @@
 package main
 
 import (
-	"fmt"
+	"log"
+	"net/http"
 )
 
 func main() {
 
-	fmt.Println("Chripy")
+	serverHandler := http.NewServeMux()
+
+	server := http.Server{
+		Handler: serverHandler,
+		Addr:    ":8080",
+	}
+
+	if err := server.ListenAndServe(); err != nil {
+		log.Fatalf("Stopped Server: %v", err)
+	}
 
 }

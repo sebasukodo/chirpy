@@ -26,7 +26,7 @@ type chirpResponse struct {
 	UserID    uuid.UUID `json:"user_id"`
 }
 
-func (cfg *apiConfig) handlerChirpCreate(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerChirpsCreate(w http.ResponseWriter, r *http.Request) {
 
 	decoder := json.NewDecoder(r.Body)
 
@@ -62,6 +62,32 @@ func (cfg *apiConfig) handlerChirpCreate(w http.ResponseWriter, r *http.Request)
 	}
 
 	respondWithJSON(w, 201, chirpResp)
+
+}
+
+func (cfg *apiConfig) handlerChirpsGetAll(w http.ResponseWriter, r *http.Request) {
+
+	allChirps, err := cfg.dbQueries.GetAllChirps(r.Context())
+	if err != nil {
+		respondWithError(w, 500, fmt.Sprintf("could not retrieve all chirps: %v", err))
+		return
+	}
+
+	chirps := make([]chirpResponse, 0, len(allChirps))
+	for _, chirp := range allChirps {
+		addChirp := chirpResponse{
+			ID:        chirp.ID,
+			CreatedAt: chirp.CreatedAt,
+			UpdatedAt: chirp.UpdatedAt,
+			Body:      chirp.Body,
+			UserID:    chirp.UserID,
+		}
+
+		chirps = append(chirps, addChirp)
+
+	}
+
+	respondWithJSON(w, 200, chirps)
 
 }
 

@@ -1,0 +1,53 @@
+@baseUrl = http://localhost:8080
+
+### Create user 1
+# @name createUser1
+POST {{baseUrl}}/api/users
+Content-Type: application/json
+
+{
+  "email": "mloneusk@example.co"
+}
+
+
+### Create user 2
+# @name createUser2
+POST {{baseUrl}}/api/users
+Content-Type: application/json
+
+{
+  "email": "johny@mail.dev"
+}
+
+
+### Create user 3
+# @name createUser3
+POST {{baseUrl}}/api/users
+Content-Type: application/json
+
+{
+  "email": "dackjorsey@example.co"
+}
+
+
+### Create chirp (using user_id from response)
+POST {{baseUrl}}/api/chirps
+Content-Type: application/json
+
+{
+  "body": "This is just a chirp",
+  "user_id": "{{createUser1.response.body.id}}"
+}
+
+###
+POST {{baseUrl}}/api/chirps
+Content-Type: application/json
+
+{
+  "body": "'This is just a chirp', haha such a Kerfuffle !",
+  "user_id": "{{createUser2.response.body.id}}"
+}
+
+### Get all chirps
+GET {{baseUrl}}/api/chirps
+Accept: application/json

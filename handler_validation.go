@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 )
+
+var slurs = [3]string{"kerfuffle", "sharbert", "fornax"}
 
 type parameters struct {
 	Body string `json:"body"`
@@ -17,6 +20,10 @@ type returnError struct {
 
 type returnValid struct {
 	Valid bool `json:"valid"`
+}
+
+type returnBody struct {
+	CleanedBody string `json:"cleaned_body"`
 }
 
 func handlerChirpValidation(w http.ResponseWriter, r *http.Request) {
@@ -35,8 +42,8 @@ func handlerChirpValidation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respBody := returnValid{
-		Valid: true,
+	respBody := returnBody{
+		CleanedBody: removeSlurs(params.Body),
 	}
 
 	respondWithJSON(w, 200, respBody)
@@ -66,5 +73,24 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 
 	w.WriteHeader(code)
 	w.Write(dat)
+
+}
+
+func removeSlurs(msg string) string {
+
+	splittedMsg := strings.Split(msg, " ")
+
+	for _, slur := range slurs {
+
+		for i := range splittedMsg {
+
+			if strings.ToLower(splittedMsg[i]) == slur {
+				splittedMsg[i] = "****"
+			}
+		}
+
+	}
+
+	return strings.Join(splittedMsg, " ")
 
 }

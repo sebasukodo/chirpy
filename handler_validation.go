@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 )
@@ -47,32 +46,6 @@ func handlerChirpValidation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, 200, respBody)
-
-}
-
-func respondWithError(w http.ResponseWriter, code int, msg string) {
-
-	respBody := returnError{
-		Error: msg,
-	}
-
-	respondWithJSON(w, code, respBody)
-
-}
-
-func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
-
-	w.Header().Set("Content-Type", "application/json")
-
-	dat, err := json.Marshal(payload)
-	if err != nil {
-		log.Printf("Error marshalling JSON: %s", err)
-		w.WriteHeader(500)
-		return
-	}
-
-	w.WriteHeader(code)
-	w.Write(dat)
 
 }
 

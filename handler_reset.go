@@ -1,13 +1,26 @@
 package main
 
-import "net/http"
+import (
+	"fmt"
+	"net/http"
+)
 
 func (cfg *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
 
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	if cfg.platform != "dev" {
+		respondWithError(w, 403, "ACCESS DENIED")
+		return
+	}
+
+	if err := cfg.dbQueries.DeleteAllUsers(r.Context()); err != nil {
+		respondWithError(w, 500, fmt.Sprintf("could not delete all users: %w", err))
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 
-	cfg.fileserverHits.Swap(0)
-	w.Write([]byte("Hits reset to 0"))
+	body := "<html><body><h1>All Users have been deleted successfully</h1></body></html>"
+	w.Write([]byte(body))
 
 }

@@ -40,6 +40,7 @@ Content-Type: application/json
 }
 
 ###
+# @name chirp1
 POST {{baseUrl}}/api/chirps
 Content-Type: application/json
 
@@ -48,6 +49,25 @@ Content-Type: application/json
   "user_id": "{{createUser2.response.body.id}}"
 }
 
+###
+# @name chirp2
+POST {{baseUrl}}/api/chirps
+Content-Type: application/json
+
+{
+  "body": "Shipping on Friday was a mistake.",
+  "user_id": "{{createUser3.response.body.id}}"
+}
+
 ### Get all chirps
 GET {{baseUrl}}/api/chirps
+Accept: application/json
+
+### Get one chirp
+GET {{baseUrl}}/api/chirps/{{chirp1.response.body.id}}
+Accept: application/json
+
+### Get one chirp
+#d6a88b7c-ea38-4aae-88be-07df36c03dd0
+GET {{baseUrl}}/api/chirps/{{chirp2.response.body.id}}
 Accept: application/json

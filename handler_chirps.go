@@ -53,15 +53,7 @@ func (cfg *apiConfig) handlerChirpsCreate(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	chirpResp := chirpResponse{
-		ID:        data.ID,
-		CreatedAt: data.CreatedAt,
-		UpdatedAt: data.UpdatedAt,
-		Body:      data.Body,
-		UserID:    data.UserID,
-	}
-
-	respondWithJSON(w, 201, chirpResp)
+	respondWithJSON(w, 201, convertDatabaseChirp(data))
 
 }
 
@@ -75,19 +67,32 @@ func (cfg *apiConfig) handlerChirpsGetAll(w http.ResponseWriter, r *http.Request
 
 	chirps := make([]chirpResponse, 0, len(allChirps))
 	for _, chirp := range allChirps {
-		addChirp := chirpResponse{
-			ID:        chirp.ID,
-			CreatedAt: chirp.CreatedAt,
-			UpdatedAt: chirp.UpdatedAt,
-			Body:      chirp.Body,
-			UserID:    chirp.UserID,
-		}
 
-		chirps = append(chirps, addChirp)
+		chirps = append(chirps, convertDatabaseChirp(chirp))
 
 	}
 
 	respondWithJSON(w, 200, chirps)
+
+}
+
+func (cfg *apiConfig) handlerChirpsGetByID(w http.ResponseWriter, r *http.Request) {
+
+	chirpIDString := r.PathValue("chirpID")
+
+	chirpID, err := uuid.Parse(chirpIDString)
+	if err != nil {
+		respondWithError(w, 400, fmt.Sprintf("%v is not a valid uuid: %v", chirpIDString, err))
+		return
+	}
+
+	chirp, err := cfg.dbQueries.GetChirpByID(r.Context(), chirpID)
+	if err != nil {
+		respondWithError(w, 404, "chirp not found")
+		return
+	}
+
+	respondWithJSON(w, 200, convertDatabaseChirp(chirp))
 
 }
 
@@ -108,4 +113,14 @@ func removeSlurs(msg string) string {
 
 	return strings.Join(splittedMsg, " ")
 
+}
+
+func convertDatabaseChirp(dbChirp database.Chirp) chirpResponse {
+	return chirpResponse{
+		ID:        dbChirp.ID,
+		CreatedAt: dbChirp.CreatedAt,
+		UpdatedAt: dbChirp.UpdatedAt,
+		Body:      dbChirp.Body,
+		UserID:    dbChirp.UserID,
+	}
 }

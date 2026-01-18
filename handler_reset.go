@@ -13,7 +13,7 @@ func (cfg *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := cfg.dbQueries.DeleteAllUsers(r.Context()); err != nil {
-		respondWithError(w, 500, fmt.Sprintf("could not delete all users: %w", err))
+		respondWithError(w, 500, fmt.Sprintf("could not delete all users: %v", err))
 		return
 	}
 

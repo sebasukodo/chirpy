@@ -6,6 +6,10 @@ import (
 	"net/http"
 )
 
+type returnError struct {
+	Error string `json:"error"`
+}
+
 func respondWithError(w http.ResponseWriter, code int, msg string) {
 
 	respBody := returnError{

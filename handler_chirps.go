@@ -8,14 +8,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sebasukodo/chirpy/internal/auth"
 	"github.com/sebasukodo/chirpy/internal/database"
 )
 
 var slurs = [3]string{"kerfuffle", "sharbert", "fornax"}
 
 type chirpCreateRequest struct {
-	Body   string    `json:"body"`
-	UserID uuid.UUID `json:"user_id"`
+	Body string `json:"body"`
 }
 
 type chirpResponse struct {
@@ -37,6 +37,18 @@ func (cfg *apiConfig) handlerChirpsCreate(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	bearer, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, 401, "Access Denied")
+		return
+	}
+
+	uid, err := auth.ValidateJWT(bearer, cfg.tokenSecret)
+	if err != nil {
+		respondWithError(w, 401, "Access Denied")
+		return
+	}
+
 	if len(chirpReq.Body) > 140 {
 		respondWithError(w, 400, "Chirp is too long")
 		return
@@ -44,7 +56,7 @@ func (cfg *apiConfig) handlerChirpsCreate(w http.ResponseWriter, r *http.Request
 
 	chirpParam := database.CreateChirpParams{
 		Body:   removeSlurs(chirpReq.Body),
-		UserID: chirpReq.UserID,
+		UserID: uid,
 	}
 
 	data, err := cfg.dbQueries.CreateChirp(r.Context(), chirpParam)

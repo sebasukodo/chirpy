@@ -12,8 +12,9 @@ import (
 )
 
 type userAuth struct {
-	Password string `json:"password"`
-	Email    string `json:"email"`
+	Password  string `json:"password"`
+	Email     string `json:"email"`
+	ExpiresIn int32  `json:"expires_in_seconds"`
 }
 
 type User struct {
@@ -21,6 +22,7 @@ type User struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
+	Token     string    `json:"token"`
 }
 
 func (cfg *apiConfig) handlerUsersCreate(w http.ResponseWriter, r *http.Request) {
@@ -72,18 +74,29 @@ func (cfg *apiConfig) handlerUsersLogin(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	matching, err := auth.CheckPasswordHash(userLoginRequest.Password, userInfo.HashedPassword)
+	check, err := auth.CheckPasswordHash(userLoginRequest.Password, userInfo.HashedPassword)
+	if err != nil || !check {
+		respondWithError(w, 401, "incorrect email or password")
+		return
+	}
+
+	expires := userLoginRequest.ExpiresIn
+	if expires < 1 || expires > 3600 {
+		expires = 3600
+	}
+
+	expireInSeconds := time.Duration(expires) * time.Second
+
+	jwtToken, err := auth.MakeJWT(userInfo.ID, cfg.tokenSecret, expireInSeconds)
 	if err != nil {
 		respondWithError(w, 401, "incorrect email or password")
 		return
 	}
 
-	if matching {
-		respondWithJSON(w, 200, convertDatabaseUser(userInfo))
-		return
-	}
+	userWithToken := convertDatabaseUser(userInfo)
+	userWithToken.Token = jwtToken
 
-	respondWithError(w, 401, "incorrect email or password")
+	respondWithJSON(w, 200, userWithToken)
 
 }
 

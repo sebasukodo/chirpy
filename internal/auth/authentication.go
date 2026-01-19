@@ -2,16 +2,45 @@ package auth
 
 import (
 	"fmt"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
+const (
+	TokenAccess string = "cirpy-access"
+)
+
+func GetBearerToken(headers http.Header) (string, error) {
+
+	authHeader := headers.Get("Authorization")
+
+	if authHeader == "" {
+		return "", fmt.Errorf("Access Denied")
+	}
+
+	prefix := "Bearer "
+	if !strings.HasPrefix(authHeader, prefix) {
+		return "", fmt.Errorf("Acces Denied")
+	}
+
+	authHeader = strings.TrimPrefix(authHeader, prefix)
+
+	if authHeader == "" {
+		return "", fmt.Errorf("Acces Denied")
+	}
+
+	return authHeader, nil
+
+}
+
 func MakeJWT(userID uuid.UUID, tokenSecret string, expiresIn time.Duration) (string, error) {
 
 	registerClaims := jwt.RegisteredClaims{
-		Issuer:    "chirpy",
+		Issuer:    TokenAccess,
 		IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
 		ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(expiresIn)),
 		Subject:   userID.String(),
@@ -40,7 +69,7 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 		return uuid.Nil, fmt.Errorf("invalid token")
 	}
 
-	if claims.Issuer != "chirpy" {
+	if claims.Issuer != TokenAccess {
 		return uuid.Nil, fmt.Errorf("invalid token")
 	}
 

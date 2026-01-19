@@ -95,17 +95,80 @@ func (cfg *apiConfig) handlerUsersLogin(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	cfg.dbQueries.StoreRefreshToken(r.Context(), database.StoreRefreshTokenParams{
+	_, err = cfg.dbQueries.StoreRefreshToken(r.Context(), database.StoreRefreshTokenParams{
 		Token:     refreshToken,
 		UserID:    userInfo.ID,
 		ExpiresAt: time.Now().UTC().Add(RefreshTokenExpiresInHours),
 	})
+	if err != nil {
+		respondWithError(w, 500, "could not store refresh token")
+		return
+	}
 
 	userWithToken := convertDatabaseUser(userInfo)
 	userWithToken.Token = jwtToken
 	userWithToken.RefreshToken = refreshToken
 
 	respondWithJSON(w, 200, userWithToken)
+
+}
+
+func (cfg *apiConfig) handlerUsersChangeCredentials(w http.ResponseWriter, r *http.Request) {
+
+	bearer, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, 401, "Access Denied")
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+
+	userRequest := userAuth{}
+
+	if err := decoder.Decode(&userRequest); err != nil {
+		respondWithError(w, 400, "Bad Request")
+		return
+	}
+
+	userID, err := auth.ValidateJWT(bearer, cfg.tokenSecret)
+	if err != nil {
+		respondWithError(w, 401, "Access Denied")
+		return
+	}
+
+	if userRequest.Email != "" {
+		if err := cfg.dbQueries.UpdateUserEmail(r.Context(), database.UpdateUserEmailParams{
+			ID:    userID,
+			Email: userRequest.Email,
+		}); err != nil {
+			respondWithError(w, 500, "incorrect email or password")
+			return
+		}
+	}
+
+	if userRequest.Password != "" {
+		hashedPw, err := auth.HashPassword(userRequest.Password)
+		if err != nil {
+			respondWithError(w, 500, "incorrect email or password")
+			return
+		}
+
+		if err := cfg.dbQueries.UpdateUserPassword(r.Context(), database.UpdateUserPasswordParams{
+			ID:             userID,
+			HashedPassword: hashedPw,
+		}); err != nil {
+			respondWithError(w, 500, "incorrect email or password")
+			return
+		}
+	}
+
+	userInfo, err := cfg.dbQueries.GetUserByID(r.Context(), userID)
+	if err != nil {
+		respondWithError(w, 500, "incorrect email or password")
+		return
+	}
+
+	respondWithJSON(w, 200, convertDatabaseUser(userInfo))
 
 }
 

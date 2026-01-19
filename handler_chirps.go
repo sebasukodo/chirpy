@@ -108,6 +108,10 @@ func (cfg *apiConfig) handlerChirpsGetByID(w http.ResponseWriter, r *http.Reques
 
 }
 
+func (cfg *apiConfig) handlerChirpsDeleteByID(w http.ResponseWriter, r *http.Request) {
+
+}
+
 func removeSlurs(msg string) string {
 
 	splittedMsg := strings.Split(msg, " ")

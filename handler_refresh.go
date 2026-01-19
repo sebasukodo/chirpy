@@ -42,7 +42,7 @@ func (cfg *apiConfig) handlerRefreshToken(w http.ResponseWriter, r *http.Request
 
 	newToken, err := auth.MakeJWT(refreshToken.UserID, cfg.tokenSecret, TokenExpiresInSeconds)
 	if err != nil {
-		respondWithError(w, 401, "Access Denied")
+		respondWithError(w, 500, "could not create token")
 		return
 	}
 
@@ -70,6 +70,6 @@ func (cfg *apiConfig) handlerRevokeToken(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	respondWithJSON(w, 204, "")
+	w.WriteHeader(http.StatusNoContent)
 
 }

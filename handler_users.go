@@ -11,18 +11,21 @@ import (
 	"github.com/sebasukodo/chirpy/internal/database"
 )
 
+const TokenExpiresInSeconds = time.Duration(3600) * time.Second
+const RefreshTokenExpiresInHours = time.Duration(60*24) * time.Hour
+
 type userAuth struct {
-	Password  string `json:"password"`
-	Email     string `json:"email"`
-	ExpiresIn int32  `json:"expires_in_seconds"`
+	Password string `json:"password"`
+	Email    string `json:"email"`
 }
 
 type User struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Email     string    `json:"email"`
-	Token     string    `json:"token"`
+	ID           uuid.UUID `json:"id"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+	Email        string    `json:"email"`
+	Token        string    `json:"token"`
+	RefreshToken string    `json:"refresh_token"`
 }
 
 func (cfg *apiConfig) handlerUsersCreate(w http.ResponseWriter, r *http.Request) {
@@ -80,21 +83,27 @@ func (cfg *apiConfig) handlerUsersLogin(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	expires := userLoginRequest.ExpiresIn
-	if expires < 1 || expires > 3600 {
-		expires = 3600
-	}
-
-	expireInSeconds := time.Duration(expires) * time.Second
-
-	jwtToken, err := auth.MakeJWT(userInfo.ID, cfg.tokenSecret, expireInSeconds)
+	jwtToken, err := auth.MakeJWT(userInfo.ID, cfg.tokenSecret, TokenExpiresInSeconds)
 	if err != nil {
 		respondWithError(w, 401, "incorrect email or password")
 		return
 	}
 
+	refreshToken, err := auth.MakeRefreshToken()
+	if err != nil {
+		respondWithError(w, 401, "incorrect email or password")
+		return
+	}
+
+	cfg.dbQueries.StoreRefreshToken(r.Context(), database.StoreRefreshTokenParams{
+		Token:     refreshToken,
+		UserID:    userInfo.ID,
+		ExpiresAt: time.Now().UTC().Add(RefreshTokenExpiresInHours),
+	})
+
 	userWithToken := convertDatabaseUser(userInfo)
 	userWithToken.Token = jwtToken
+	userWithToken.RefreshToken = refreshToken
 
 	respondWithJSON(w, 200, userWithToken)
 

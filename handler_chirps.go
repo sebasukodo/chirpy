@@ -110,6 +110,44 @@ func (cfg *apiConfig) handlerChirpsGetByID(w http.ResponseWriter, r *http.Reques
 
 func (cfg *apiConfig) handlerChirpsDeleteByID(w http.ResponseWriter, r *http.Request) {
 
+	bearer, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, 401, "Access Denied")
+		return
+	}
+
+	userID, err := auth.ValidateJWT(bearer, cfg.tokenSecret)
+	if err != nil {
+		respondWithError(w, 401, "Access Denied")
+		return
+	}
+
+	chirpIDString := r.PathValue("chirpID")
+
+	chirpID, err := uuid.Parse(chirpIDString)
+	if err != nil {
+		respondWithError(w, 400, "Access Denied")
+		return
+	}
+
+	chirpUserID, err := cfg.dbQueries.GetChirpUserID(r.Context(), chirpID)
+	if err != nil {
+		respondWithError(w, 404, "not found in database")
+		return
+	}
+
+	if userID != chirpUserID {
+		respondWithError(w, 403, "Access Denied")
+		return
+	}
+
+	if err := cfg.dbQueries.DeleteChirpByID(r.Context(), chirpID); err != nil {
+		respondWithError(w, 500, "could not delete chirp")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+
 }
 
 func removeSlurs(msg string) string {

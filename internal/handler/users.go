@@ -1,4 +1,4 @@
-package main
+package handler
 
 import (
 	"encoding/json"
@@ -11,14 +11,6 @@ import (
 	"github.com/sebasukodo/chirpy/internal/database"
 )
 
-const TokenExpiresInSeconds = time.Duration(3600) * time.Second
-const RefreshTokenExpiresInHours = time.Duration(60*24) * time.Hour
-
-type userAuth struct {
-	Password string `json:"password"`
-	Email    string `json:"email"`
-}
-
 type User struct {
 	ID           uuid.UUID `json:"id"`
 	CreatedAt    time.Time `json:"created_at"`
@@ -29,7 +21,12 @@ type User struct {
 	RefreshToken string    `json:"refresh_token"`
 }
 
-func (cfg *apiConfig) handlerUsersCreate(w http.ResponseWriter, r *http.Request) {
+type userAuth struct {
+	Password string `json:"password"`
+	Email    string `json:"email"`
+}
+
+func (cfg *ApiConfig) UsersCreate(w http.ResponseWriter, r *http.Request) {
 
 	decoder := json.NewDecoder(r.Body)
 
@@ -51,7 +48,7 @@ func (cfg *apiConfig) handlerUsersCreate(w http.ResponseWriter, r *http.Request)
 		HashedPassword: hashed,
 	}
 
-	dbUser, err := cfg.dbQueries.CreateUser(r.Context(), userInfoParams)
+	dbUser, err := cfg.DbQueries.CreateUser(r.Context(), userInfoParams)
 	if err != nil {
 		respondWithError(w, 500, fmt.Sprintf("could not create user: %v", err))
 		return
@@ -61,7 +58,7 @@ func (cfg *apiConfig) handlerUsersCreate(w http.ResponseWriter, r *http.Request)
 
 }
 
-func (cfg *apiConfig) handlerUsersLogin(w http.ResponseWriter, r *http.Request) {
+func (cfg *ApiConfig) UsersLogin(w http.ResponseWriter, r *http.Request) {
 
 	decoder := json.NewDecoder(r.Body)
 
@@ -72,7 +69,7 @@ func (cfg *apiConfig) handlerUsersLogin(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	userInfo, err := cfg.dbQueries.GetUserByEmail(r.Context(), userLoginRequest.Email)
+	userInfo, err := cfg.DbQueries.GetUserByEmail(r.Context(), userLoginRequest.Email)
 	if err != nil {
 		respondWithError(w, 401, "incorrect email or password")
 		return
@@ -84,7 +81,7 @@ func (cfg *apiConfig) handlerUsersLogin(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	jwtToken, err := auth.MakeJWT(userInfo.ID, cfg.tokenSecret, TokenExpiresInSeconds)
+	jwtToken, err := auth.MakeJWT(userInfo.ID, cfg.TokenSecret, TokenExpiresInSeconds)
 	if err != nil {
 		respondWithError(w, 401, "incorrect email or password")
 		return
@@ -96,7 +93,7 @@ func (cfg *apiConfig) handlerUsersLogin(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	_, err = cfg.dbQueries.StoreRefreshToken(r.Context(), database.StoreRefreshTokenParams{
+	_, err = cfg.DbQueries.StoreRefreshToken(r.Context(), database.StoreRefreshTokenParams{
 		Token:     refreshToken,
 		UserID:    userInfo.ID,
 		ExpiresAt: time.Now().UTC().Add(RefreshTokenExpiresInHours),
@@ -114,7 +111,7 @@ func (cfg *apiConfig) handlerUsersLogin(w http.ResponseWriter, r *http.Request) 
 
 }
 
-func (cfg *apiConfig) handlerUsersChangeCredentials(w http.ResponseWriter, r *http.Request) {
+func (cfg *ApiConfig) UsersChangeCredentials(w http.ResponseWriter, r *http.Request) {
 
 	bearer, err := auth.GetBearerToken(r.Header)
 	if err != nil {
@@ -131,14 +128,14 @@ func (cfg *apiConfig) handlerUsersChangeCredentials(w http.ResponseWriter, r *ht
 		return
 	}
 
-	userID, err := auth.ValidateJWT(bearer, cfg.tokenSecret)
+	userID, err := auth.ValidateJWT(bearer, cfg.TokenSecret)
 	if err != nil {
 		respondWithError(w, 401, "Access Denied")
 		return
 	}
 
 	if userRequest.Email != "" {
-		if err := cfg.dbQueries.UpdateUserEmail(r.Context(), database.UpdateUserEmailParams{
+		if err := cfg.DbQueries.UpdateUserEmail(r.Context(), database.UpdateUserEmailParams{
 			ID:    userID,
 			Email: userRequest.Email,
 		}); err != nil {
@@ -154,7 +151,7 @@ func (cfg *apiConfig) handlerUsersChangeCredentials(w http.ResponseWriter, r *ht
 			return
 		}
 
-		if err := cfg.dbQueries.UpdateUserPassword(r.Context(), database.UpdateUserPasswordParams{
+		if err := cfg.DbQueries.UpdateUserPassword(r.Context(), database.UpdateUserPasswordParams{
 			ID:             userID,
 			HashedPassword: hashedPw,
 		}); err != nil {
@@ -163,7 +160,7 @@ func (cfg *apiConfig) handlerUsersChangeCredentials(w http.ResponseWriter, r *ht
 		}
 	}
 
-	userInfo, err := cfg.dbQueries.GetUserByID(r.Context(), userID)
+	userInfo, err := cfg.DbQueries.GetUserByID(r.Context(), userID)
 	if err != nil {
 		respondWithError(w, 500, "incorrect email or password")
 		return

@@ -1,4 +1,4 @@
-package main
+package handler
 
 import (
 	"encoding/json"
@@ -17,7 +17,7 @@ type eventRequest struct {
 	Data  data   `json:"data"`
 }
 
-func (cfg *apiConfig) handlerVIP(w http.ResponseWriter, r *http.Request) {
+func (cfg *ApiConfig) VIP(w http.ResponseWriter, r *http.Request) {
 
 	key, err := auth.GetAPIKey(r.Header)
 	if err != nil {
@@ -25,7 +25,7 @@ func (cfg *apiConfig) handlerVIP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if key != cfg.polkaApiKey {
+	if key != cfg.PolkaApiKey {
 		respondWithError(w, 401, "Access Denied")
 		return
 	}
@@ -44,7 +44,7 @@ func (cfg *apiConfig) handlerVIP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = cfg.dbQueries.UpdateUserVIP(r.Context(), eventRequestData.Data.UserID)
+	_, err = cfg.DbQueries.UpdateUserVIP(r.Context(), eventRequestData.Data.UserID)
 	if err != nil {
 		respondWithError(w, 404, "User not found")
 		return

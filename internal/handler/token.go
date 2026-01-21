@@ -1,4 +1,4 @@
-package main
+package handler
 
 import (
 	"net/http"
@@ -7,11 +7,15 @@ import (
 	"github.com/sebasukodo/chirpy/internal/auth"
 )
 
+const TokenExpiresInSeconds = time.Duration(3600) * time.Second
+
+const RefreshTokenExpiresInHours = time.Duration(60*24) * time.Hour
+
 type respondNewToken struct {
 	Token string `json:"token"`
 }
 
-func (cfg *apiConfig) handlerRefreshToken(w http.ResponseWriter, r *http.Request) {
+func (cfg *ApiConfig) RefreshToken(w http.ResponseWriter, r *http.Request) {
 
 	bearer, err := auth.GetBearerToken(r.Header)
 	if err != nil {
@@ -19,7 +23,7 @@ func (cfg *apiConfig) handlerRefreshToken(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	refreshToken, err := cfg.dbQueries.GetRefreshTokenByToken(r.Context(), bearer)
+	refreshToken, err := cfg.DbQueries.GetRefreshTokenByToken(r.Context(), bearer)
 	if err != nil {
 		respondWithError(w, 401, "Access Denied")
 		return
@@ -31,7 +35,7 @@ func (cfg *apiConfig) handlerRefreshToken(w http.ResponseWriter, r *http.Request
 	}
 
 	if time.Now().UTC().After(refreshToken.ExpiresAt) {
-		_, err := cfg.dbQueries.SetRefreshTokenInvalid(r.Context(), refreshToken.Token)
+		_, err := cfg.DbQueries.SetRefreshTokenInvalid(r.Context(), refreshToken.Token)
 		if err != nil {
 			respondWithError(w, 500, "could not update database")
 			return
@@ -40,7 +44,7 @@ func (cfg *apiConfig) handlerRefreshToken(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	newToken, err := auth.MakeJWT(refreshToken.UserID, cfg.tokenSecret, TokenExpiresInSeconds)
+	newToken, err := auth.MakeJWT(refreshToken.UserID, cfg.TokenSecret, TokenExpiresInSeconds)
 	if err != nil {
 		respondWithError(w, 500, "could not create token")
 		return
@@ -50,7 +54,7 @@ func (cfg *apiConfig) handlerRefreshToken(w http.ResponseWriter, r *http.Request
 
 }
 
-func (cfg *apiConfig) handlerRevokeToken(w http.ResponseWriter, r *http.Request) {
+func (cfg *ApiConfig) RevokeToken(w http.ResponseWriter, r *http.Request) {
 
 	bearer, err := auth.GetBearerToken(r.Header)
 	if err != nil {
@@ -58,13 +62,13 @@ func (cfg *apiConfig) handlerRevokeToken(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	refreshToken, err := cfg.dbQueries.GetRefreshTokenByToken(r.Context(), bearer)
+	refreshToken, err := cfg.DbQueries.GetRefreshTokenByToken(r.Context(), bearer)
 	if err != nil {
 		respondWithError(w, 401, "Access Denied")
 		return
 	}
 
-	_, err = cfg.dbQueries.SetRefreshTokenInvalid(r.Context(), refreshToken.Token)
+	_, err = cfg.DbQueries.SetRefreshTokenInvalid(r.Context(), refreshToken.Token)
 	if err != nil {
 		respondWithError(w, 500, "could not update database")
 		return

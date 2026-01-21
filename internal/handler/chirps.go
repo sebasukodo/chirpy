@@ -1,4 +1,4 @@
-package main
+package handler
 
 import (
 	"encoding/json"
@@ -27,50 +27,7 @@ type chirpResponse struct {
 	UserID    uuid.UUID `json:"user_id"`
 }
 
-func (cfg *apiConfig) handlerChirpsCreate(w http.ResponseWriter, r *http.Request) {
-
-	decoder := json.NewDecoder(r.Body)
-
-	chirpReq := chirpCreateRequest{}
-
-	if err := decoder.Decode(&chirpReq); err != nil {
-		respondWithError(w, 500, fmt.Sprintf("could not decode json message: %v", err))
-		return
-	}
-
-	bearer, err := auth.GetBearerToken(r.Header)
-	if err != nil {
-		respondWithError(w, 401, "Access Denied")
-		return
-	}
-
-	uid, err := auth.ValidateJWT(bearer, cfg.tokenSecret)
-	if err != nil {
-		respondWithError(w, 401, "Access Denied")
-		return
-	}
-
-	if len(chirpReq.Body) > 140 {
-		respondWithError(w, 400, "Chirp is too long")
-		return
-	}
-
-	chirpParam := database.CreateChirpParams{
-		Body:   removeSlurs(chirpReq.Body),
-		UserID: uid,
-	}
-
-	data, err := cfg.dbQueries.CreateChirp(r.Context(), chirpParam)
-	if err != nil {
-		respondWithError(w, 500, fmt.Sprintf("could not create chirp: %v", err))
-		return
-	}
-
-	respondWithJSON(w, 201, convertDatabaseChirp(data))
-
-}
-
-func (cfg *apiConfig) handlerChirpsGetAll(w http.ResponseWriter, r *http.Request) {
+func (cfg *ApiConfig) ChirpsGetAll(w http.ResponseWriter, r *http.Request) {
 
 	queryAuthor := r.URL.Query().Get("author_id")
 	querySort := r.URL.Query().Get("sort")
@@ -82,7 +39,7 @@ func (cfg *apiConfig) handlerChirpsGetAll(w http.ResponseWriter, r *http.Request
 	var chirps []database.Chirp
 	if queryAuthor == "" {
 		var err error
-		chirps, err = cfg.dbQueries.GetAllChirps(r.Context())
+		chirps, err = cfg.DbQueries.GetAllChirps(r.Context())
 		if err != nil {
 			respondWithError(w, 500, fmt.Sprintf("could not retrieve all chirps: %v", err))
 			return
@@ -96,7 +53,7 @@ func (cfg *apiConfig) handlerChirpsGetAll(w http.ResponseWriter, r *http.Request
 			return
 		}
 
-		chirps, err = cfg.dbQueries.GetAllChirpsFromAuthor(r.Context(), query)
+		chirps, err = cfg.DbQueries.GetAllChirpsFromAuthor(r.Context(), query)
 		if err != nil {
 			respondWithError(w, 500, "could not retrieve chirps")
 			return
@@ -122,7 +79,7 @@ func (cfg *apiConfig) handlerChirpsGetAll(w http.ResponseWriter, r *http.Request
 
 }
 
-func (cfg *apiConfig) handlerChirpsGetByID(w http.ResponseWriter, r *http.Request) {
+func (cfg *ApiConfig) ChirpsGetByID(w http.ResponseWriter, r *http.Request) {
 
 	chirpIDString := r.PathValue("chirpID")
 
@@ -132,7 +89,7 @@ func (cfg *apiConfig) handlerChirpsGetByID(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	chirp, err := cfg.dbQueries.GetChirpByID(r.Context(), chirpID)
+	chirp, err := cfg.DbQueries.GetChirpByID(r.Context(), chirpID)
 	if err != nil {
 		respondWithError(w, 404, "chirp not found")
 		return
@@ -142,7 +99,16 @@ func (cfg *apiConfig) handlerChirpsGetByID(w http.ResponseWriter, r *http.Reques
 
 }
 
-func (cfg *apiConfig) handlerChirpsDeleteByID(w http.ResponseWriter, r *http.Request) {
+func (cfg *ApiConfig) ChirpsCreate(w http.ResponseWriter, r *http.Request) {
+
+	decoder := json.NewDecoder(r.Body)
+
+	chirpReq := chirpCreateRequest{}
+
+	if err := decoder.Decode(&chirpReq); err != nil {
+		respondWithError(w, 500, fmt.Sprintf("could not decode json message: %v", err))
+		return
+	}
 
 	bearer, err := auth.GetBearerToken(r.Header)
 	if err != nil {
@@ -150,7 +116,41 @@ func (cfg *apiConfig) handlerChirpsDeleteByID(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	userID, err := auth.ValidateJWT(bearer, cfg.tokenSecret)
+	uid, err := auth.ValidateJWT(bearer, cfg.TokenSecret)
+	if err != nil {
+		respondWithError(w, 401, "Access Denied")
+		return
+	}
+
+	if len(chirpReq.Body) > 140 {
+		respondWithError(w, 400, "Chirp is too long")
+		return
+	}
+
+	chirpParam := database.CreateChirpParams{
+		Body:   removeSlurs(chirpReq.Body),
+		UserID: uid,
+	}
+
+	data, err := cfg.DbQueries.CreateChirp(r.Context(), chirpParam)
+	if err != nil {
+		respondWithError(w, 500, fmt.Sprintf("could not create chirp: %v", err))
+		return
+	}
+
+	respondWithJSON(w, 201, convertDatabaseChirp(data))
+
+}
+
+func (cfg *ApiConfig) ChirpsDeleteByID(w http.ResponseWriter, r *http.Request) {
+
+	bearer, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, 401, "Access Denied")
+		return
+	}
+
+	userID, err := auth.ValidateJWT(bearer, cfg.TokenSecret)
 	if err != nil {
 		respondWithError(w, 401, "Access Denied")
 		return
@@ -164,7 +164,7 @@ func (cfg *apiConfig) handlerChirpsDeleteByID(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	chirpUserID, err := cfg.dbQueries.GetChirpUserID(r.Context(), chirpID)
+	chirpUserID, err := cfg.DbQueries.GetChirpUserID(r.Context(), chirpID)
 	if err != nil {
 		respondWithError(w, 404, "not found in database")
 		return
@@ -175,7 +175,7 @@ func (cfg *apiConfig) handlerChirpsDeleteByID(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	if err := cfg.dbQueries.DeleteChirpByID(r.Context(), chirpID); err != nil {
+	if err := cfg.DbQueries.DeleteChirpByID(r.Context(), chirpID); err != nil {
 		respondWithError(w, 500, "could not delete chirp")
 		return
 	}

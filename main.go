@@ -11,15 +11,9 @@ import (
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/sebasukodo/chirpy/internal/database"
+	"github.com/sebasukodo/chirpy/internal/handler"
+	"github.com/sebasukodo/chirpy/internal/middleware"
 )
-
-type apiConfig struct {
-	fileserverHits atomic.Int32
-	dbQueries      *database.Queries
-	platform       string
-	tokenSecret    string
-	polkaApiKey    string
-}
 
 const port = "8080"
 const filepathRoot = "."
@@ -38,34 +32,34 @@ func main() {
 		log.Fatalf("could not connect to database: %v", err)
 	}
 
-	apiCfg := apiConfig{
-		fileserverHits: atomic.Int32{},
-		dbQueries:      database.New(db),
-		platform:       os.Getenv("PLATFORM"),
-		tokenSecret:    os.Getenv("TOKENSECRET"),
-		polkaApiKey:    os.Getenv("POLKA_KEY"),
+	apiCfg := &handler.ApiConfig{
+		FileserverHits: atomic.Int32{},
+		DbQueries:      database.New(db),
+		Platform:       os.Getenv("PLATFORM"),
+		TokenSecret:    os.Getenv("TOKENSECRET"),
+		PolkaApiKey:    os.Getenv("POLKA_KEY"),
 	}
 
 	mux := http.NewServeMux()
 	fileServerHandler := http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))
-	mux.Handle("/app/", apiCfg.middlewareMetricsInc(fileServerHandler))
+	mux.Handle("/app/", middleware.MetricsInc(apiCfg)(fileServerHandler))
 
-	mux.HandleFunc("GET /api/healthz", handlerReadiness)
-	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetric)
+	mux.HandleFunc("GET /api/healthz", handler.Readiness)
+	mux.HandleFunc("GET /admin/metrics", apiCfg.Metric)
 
-	mux.HandleFunc("POST /api/users", apiCfg.handlerUsersCreate)
-	mux.HandleFunc("POST /api/login", apiCfg.handlerUsersLogin)
-	mux.HandleFunc("PUT /api/users", apiCfg.handlerUsersChangeCredentials)
+	mux.HandleFunc("POST /api/users", apiCfg.UsersCreate)
+	mux.HandleFunc("POST /api/login", apiCfg.UsersLogin)
+	mux.HandleFunc("PUT /api/users", apiCfg.UsersChangeCredentials)
 
-	mux.HandleFunc("POST /api/chirps", apiCfg.handlerChirpsCreate)
-	mux.HandleFunc("GET /api/chirps", apiCfg.handlerChirpsGetAll)
-	mux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.handlerChirpsGetByID)
-	mux.HandleFunc("DELETE /api/chirps/{chirpID}", apiCfg.handlerChirpsDeleteByID)
+	mux.HandleFunc("POST /api/chirps", apiCfg.ChirpsCreate)
+	mux.HandleFunc("GET /api/chirps", apiCfg.ChirpsGetAll)
+	mux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.ChirpsGetByID)
+	mux.HandleFunc("DELETE /api/chirps/{chirpID}", apiCfg.ChirpsDeleteByID)
 
-	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
-	mux.HandleFunc("POST /api/refresh", apiCfg.handlerRefreshToken)
-	mux.HandleFunc("POST /api/revoke", apiCfg.handlerRevokeToken)
-	mux.HandleFunc("POST /api/polka/webhooks", apiCfg.handlerVIP)
+	mux.HandleFunc("POST /admin/reset", apiCfg.Reset)
+	mux.HandleFunc("POST /api/refresh", apiCfg.RefreshToken)
+	mux.HandleFunc("POST /api/revoke", apiCfg.RevokeToken)
+	mux.HandleFunc("POST /api/polka/webhooks", apiCfg.VIP)
 
 	server := http.Server{
 		Handler: mux,

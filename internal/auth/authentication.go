@@ -39,6 +39,29 @@ func GetBearerToken(headers http.Header) (string, error) {
 
 }
 
+func GetAPIKey(headers http.Header) (string, error) {
+
+	authHeader := headers.Get("Authorization")
+
+	if authHeader == "" {
+		return "", fmt.Errorf("Access Denied")
+	}
+
+	prefix := "ApiKey "
+	if !strings.HasPrefix(authHeader, prefix) {
+		return "", fmt.Errorf("Access Denied")
+	}
+
+	authHeader = strings.TrimPrefix(authHeader, prefix)
+
+	if authHeader == "" {
+		return "", fmt.Errorf("Access Denied")
+	}
+
+	return authHeader, nil
+
+}
+
 func MakeRefreshToken() (string, error) {
 
 	key := make([]byte, 32)

@@ -29,3 +29,9 @@ WHERE id = $1;
 UPDATE users
 SET email = $2, updated_at = Now()
 WHERE id = $1;
+
+-- name: UpdateUserVIP :one
+UPDATE users
+SET is_chirpy_red = TRUE, updated_at = Now()
+WHERE id = $1
+RETURNING *;

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -71,20 +72,53 @@ func (cfg *apiConfig) handlerChirpsCreate(w http.ResponseWriter, r *http.Request
 
 func (cfg *apiConfig) handlerChirpsGetAll(w http.ResponseWriter, r *http.Request) {
 
-	allChirps, err := cfg.dbQueries.GetAllChirps(r.Context())
-	if err != nil {
-		respondWithError(w, 500, fmt.Sprintf("could not retrieve all chirps: %v", err))
-		return
+	queryAuthor := r.URL.Query().Get("author_id")
+	querySort := r.URL.Query().Get("sort")
+
+	if querySort != "desc" {
+		querySort = "asc"
 	}
 
-	chirps := make([]chirpResponse, 0, len(allChirps))
-	for _, chirp := range allChirps {
+	var chirps []database.Chirp
+	if queryAuthor == "" {
+		var err error
+		chirps, err = cfg.dbQueries.GetAllChirps(r.Context())
+		if err != nil {
+			respondWithError(w, 500, fmt.Sprintf("could not retrieve all chirps: %v", err))
+			return
+		}
 
-		chirps = append(chirps, convertDatabaseChirp(chirp))
+	} else {
+
+		query, err := uuid.Parse(queryAuthor)
+		if err != nil {
+			respondWithError(w, 400, "invalid author_id")
+			return
+		}
+
+		chirps, err = cfg.dbQueries.GetAllChirpsFromAuthor(r.Context(), query)
+		if err != nil {
+			respondWithError(w, 500, "could not retrieve chirps")
+			return
+		}
 
 	}
 
-	respondWithJSON(w, 200, chirps)
+	sort.Slice(chirps, func(i int, j int) bool {
+		if querySort == "desc" {
+			return chirps[i].CreatedAt.After(chirps[j].CreatedAt)
+		}
+		return chirps[i].CreatedAt.Before(chirps[j].CreatedAt)
+	})
+
+	sortedChirps := make([]chirpResponse, 0, len(chirps))
+	for _, chirp := range chirps {
+
+		sortedChirps = append(sortedChirps, convertDatabaseChirp(chirp))
+
+	}
+
+	respondWithJSON(w, 200, sortedChirps)
 
 }
 

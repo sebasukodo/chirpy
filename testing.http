@@ -64,3 +64,7 @@ Accept: application/json
 ### Get one chirp
 GET {{baseUrl}}/api/chirps/{{chirp2.response.body.id}}
 Accept: application/json
+
+### Query Test
+GET {{baseUrl}}/api/chirps?sort=asc&author_id=abad95dc-6512-43c2-9eb3-28fa912a6a34
+Accept: application/json

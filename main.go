@@ -63,8 +63,8 @@ func main() {
 	mux.HandleFunc("DELETE /api/chirps/{chirpID}", apiCfg.ChirpsDeleteByID)
 
 	mux.HandleFunc("POST /admin/reset", apiCfg.Reset)
-	mux.HandleFunc("POST /api/refresh", apiCfg.RefreshToken)
-	mux.HandleFunc("POST /api/revoke", apiCfg.RevokeToken)
+	mux.HandleFunc("POST/api/refresh", apiCfg.RefreshSessionID)
+	mux.HandleFunc("POST /api/revoke", apiCfg.RevokeSessionID)
 	mux.HandleFunc("POST /api/polka/webhooks", apiCfg.VIP)
 
 	server := http.Server{

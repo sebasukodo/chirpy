@@ -21,12 +21,12 @@ func (cfg *ApiConfig) VIP(w http.ResponseWriter, r *http.Request) {
 
 	key, err := auth.GetAPIKey(r.Header)
 	if err != nil {
-		respondWithError(w, 401, "Access Denied")
+		respondWithError(w, r, 401, "Access Denied")
 		return
 	}
 
 	if key != cfg.PolkaApiKey {
-		respondWithError(w, 401, "Access Denied")
+		respondWithError(w, r, 401, "Access Denied")
 		return
 	}
 
@@ -35,7 +35,7 @@ func (cfg *ApiConfig) VIP(w http.ResponseWriter, r *http.Request) {
 	eventRequestData := eventRequest{}
 
 	if err := decoder.Decode(&eventRequestData); err != nil {
-		respondWithError(w, 500, "Internal Error")
+		respondWithError(w, r, 500, "Internal Error")
 		return
 	}
 
@@ -46,7 +46,7 @@ func (cfg *ApiConfig) VIP(w http.ResponseWriter, r *http.Request) {
 
 	_, err = cfg.DbQueries.UpdateUserVIP(r.Context(), eventRequestData.Data.UserID)
 	if err != nil {
-		respondWithError(w, 404, "User not found")
+		respondWithError(w, r, 404, "User not found")
 		return
 	}
 

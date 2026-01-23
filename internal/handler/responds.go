@@ -7,19 +7,24 @@ import (
 	"net/http"
 
 	"github.com/a-h/templ"
+	"github.com/sebasukodo/chirpy/templates"
 )
 
 type returnError struct {
 	Error string `json:"error"`
 }
 
-func respondWithError(w http.ResponseWriter, code int, msg string) {
+func respondWithError(w http.ResponseWriter, r *http.Request, code int, msg string) {
 
-	respBody := returnError{
-		Error: msg,
+	w.WriteHeader(code)
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+	log.Printf("Responding with error %d: %s\n", code, msg)
+
+	if err := templates.HTMLError(msg).Render(r.Context(), w); err != nil {
+		http.Error(w, "Error rendering template", http.StatusInternalServerError)
 	}
-
-	respondWithJSON(w, code, respBody)
 
 }
 
@@ -60,12 +65,12 @@ func Readiness(w http.ResponseWriter, r *http.Request) {
 func (cfg *ApiConfig) Reset(w http.ResponseWriter, r *http.Request) {
 
 	if cfg.Platform != "dev" {
-		respondWithError(w, 403, "ACCESS DENIED")
+		respondWithError(w, r, 403, "ACCESS DENIED")
 		return
 	}
 
 	if err := cfg.DbQueries.DeleteAllUsers(r.Context()); err != nil {
-		respondWithError(w, 500, fmt.Sprintf("could not delete all users: %v", err))
+		respondWithError(w, r, 500, fmt.Sprintf("could not delete all users: %v", err))
 		return
 	}
 

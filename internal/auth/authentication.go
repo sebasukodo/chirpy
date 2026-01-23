@@ -62,7 +62,7 @@ func GetAPIKey(headers http.Header) (string, error) {
 
 }
 
-func MakeRefreshToken() (string, error) {
+func MakeSessionID() (string, error) {
 
 	key := make([]byte, 32)
 	_, err := rand.Read(key)

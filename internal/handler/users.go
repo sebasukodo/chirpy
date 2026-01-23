@@ -12,13 +12,12 @@ import (
 )
 
 type User struct {
-	ID           uuid.UUID `json:"id"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
-	Email        string    `json:"email"`
-	IsChirpyRed  bool      `json:"is_chirpy_red"`
-	Token        string    `json:"token"`
-	RefreshToken string    `json:"refresh_token"`
+	ID          uuid.UUID `json:"id"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	Email       string    `json:"email"`
+	IsChirpyRed bool      `json:"is_chirpy_red"`
+	SessionID   string    `json:"session_id"`
 }
 
 type userAuth struct {
@@ -73,22 +72,16 @@ func (cfg *ApiConfig) UsersLoginForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jwtToken, err := auth.MakeJWT(userInfo.ID, cfg.TokenSecret, TokenExpiresInSeconds)
+	sessionID, err := auth.MakeSessionID()
 	if err != nil {
 		respondWithHTML(templates.LoginError(), w, r)
 		return
 	}
 
-	refreshToken, err := auth.MakeRefreshToken()
-	if err != nil {
-		respondWithHTML(templates.LoginError(), w, r)
-		return
-	}
-
-	_, err = cfg.DbQueries.StoreRefreshToken(r.Context(), database.StoreRefreshTokenParams{
-		Token:     refreshToken,
+	_, err = cfg.DbQueries.StoreSessionID(r.Context(), database.StoreSessionIDParams{
+		ID:        sessionID,
 		UserID:    userInfo.ID,
-		ExpiresAt: time.Now().UTC().Add(RefreshTokenExpiresInHours),
+		ExpiresAt: time.Now().UTC().Add(SessionIDExpiresInHours),
 	})
 	if err != nil {
 		respondWithHTML(templates.LoginError(), w, r)
@@ -97,17 +90,17 @@ func (cfg *ApiConfig) UsersLoginForm(w http.ResponseWriter, r *http.Request) {
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session_id",
-		Value:    jwtToken,
+		Value:    sessionID,
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
-		Expires:  time.Now().Add(time.Hour),
+		Expires:  time.Now().UTC().Add(SessionIDExpiresInHours),
 	})
 
-	userWithToken := convertDatabaseUser(userInfo)
+	user := convertDatabaseUser(userInfo)
 
-	respondWithHTML(templates.LoginSuccess(userWithToken.Email), w, r)
+	respondWithHTML(templates.LoginSuccess(user.Email), w, r)
 
 }
 
@@ -115,7 +108,7 @@ func (cfg *ApiConfig) UsersChangeCredentials(w http.ResponseWriter, r *http.Requ
 
 	bearer, err := auth.GetBearerToken(r.Header)
 	if err != nil {
-		respondWithError(w, 401, "Access Denied")
+		respondWithError(w, r, 401, "Access Denied")
 		return
 	}
 
@@ -124,13 +117,13 @@ func (cfg *ApiConfig) UsersChangeCredentials(w http.ResponseWriter, r *http.Requ
 	userRequest := userAuth{}
 
 	if err := decoder.Decode(&userRequest); err != nil {
-		respondWithError(w, 400, "Bad Request")
+		respondWithError(w, r, 400, "Bad Request")
 		return
 	}
 
 	userID, err := auth.ValidateJWT(bearer, cfg.TokenSecret)
 	if err != nil {
-		respondWithError(w, 401, "Access Denied")
+		respondWithError(w, r, 401, "Access Denied")
 		return
 	}
 
@@ -139,7 +132,7 @@ func (cfg *ApiConfig) UsersChangeCredentials(w http.ResponseWriter, r *http.Requ
 			ID:    userID,
 			Email: userRequest.Email,
 		}); err != nil {
-			respondWithError(w, 500, "incorrect email or password")
+			respondWithError(w, r, 500, "incorrect email or password")
 			return
 		}
 	}
@@ -147,7 +140,7 @@ func (cfg *ApiConfig) UsersChangeCredentials(w http.ResponseWriter, r *http.Requ
 	if userRequest.Password != "" {
 		hashedPw, err := auth.HashPassword(userRequest.Password)
 		if err != nil {
-			respondWithError(w, 500, "incorrect email or password")
+			respondWithError(w, r, 500, "incorrect email or password")
 			return
 		}
 
@@ -155,14 +148,14 @@ func (cfg *ApiConfig) UsersChangeCredentials(w http.ResponseWriter, r *http.Requ
 			ID:             userID,
 			HashedPassword: hashedPw,
 		}); err != nil {
-			respondWithError(w, 500, "incorrect email or password")
+			respondWithError(w, r, 500, "incorrect email or password")
 			return
 		}
 	}
 
 	userInfo, err := cfg.DbQueries.GetUserByID(r.Context(), userID)
 	if err != nil {
-		respondWithError(w, 500, "incorrect email or password")
+		respondWithError(w, r, 500, "incorrect email or password")
 		return
 	}
 

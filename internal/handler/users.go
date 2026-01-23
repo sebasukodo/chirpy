@@ -2,13 +2,13 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/sebasukodo/chirpy/internal/auth"
 	"github.com/sebasukodo/chirpy/internal/database"
+	"github.com/sebasukodo/chirpy/templates"
 )
 
 type User struct {
@@ -26,20 +26,16 @@ type userAuth struct {
 	Email    string `json:"email"`
 }
 
-func (cfg *ApiConfig) UsersCreate(w http.ResponseWriter, r *http.Request) {
+func (cfg *ApiConfig) UsersRegisterForm(w http.ResponseWriter, r *http.Request) {
 
-	decoder := json.NewDecoder(r.Body)
-
-	userInfo := userAuth{}
-
-	if err := decoder.Decode(&userInfo); err != nil {
-		respondWithError(w, 500, fmt.Sprintf("error while decoding: %v", err))
-		return
+	userInfo := userAuth{
+		Password: r.FormValue("password"),
+		Email:    r.FormValue("email"),
 	}
 
 	hashed, err := auth.HashPassword(userInfo.Password)
 	if err != nil {
-		respondWithError(w, 500, fmt.Sprintf("could not hash password: %v", err))
+		respondWithHTML(templates.RegisterError(), w, r)
 		return
 	}
 
@@ -48,48 +44,44 @@ func (cfg *ApiConfig) UsersCreate(w http.ResponseWriter, r *http.Request) {
 		HashedPassword: hashed,
 	}
 
-	dbUser, err := cfg.DbQueries.CreateUser(r.Context(), userInfoParams)
+	_, err = cfg.DbQueries.CreateUser(r.Context(), userInfoParams)
 	if err != nil {
-		respondWithError(w, 500, fmt.Sprintf("could not create user: %v", err))
+		respondWithHTML(templates.RegisterError(), w, r)
 		return
 	}
 
-	respondWithJSON(w, 201, convertDatabaseUser(dbUser))
+	respondWithHTML(templates.RegisterSuccess(), w, r)
 
 }
 
-func (cfg *ApiConfig) UsersLogin(w http.ResponseWriter, r *http.Request) {
+func (cfg *ApiConfig) UsersLoginForm(w http.ResponseWriter, r *http.Request) {
 
-	decoder := json.NewDecoder(r.Body)
-
-	userLoginRequest := userAuth{}
-
-	if err := decoder.Decode(&userLoginRequest); err != nil {
-		respondWithError(w, 401, "incorrect email or password")
-		return
+	userLoginRequest := userAuth{
+		Password: r.FormValue("password"),
+		Email:    r.FormValue("email"),
 	}
 
 	userInfo, err := cfg.DbQueries.GetUserByEmail(r.Context(), userLoginRequest.Email)
 	if err != nil {
-		respondWithError(w, 401, "incorrect email or password")
+		respondWithHTML(templates.LoginError(), w, r)
 		return
 	}
 
 	check, err := auth.CheckPasswordHash(userLoginRequest.Password, userInfo.HashedPassword)
 	if err != nil || !check {
-		respondWithError(w, 401, "incorrect email or password")
+		respondWithHTML(templates.LoginError(), w, r)
 		return
 	}
 
 	jwtToken, err := auth.MakeJWT(userInfo.ID, cfg.TokenSecret, TokenExpiresInSeconds)
 	if err != nil {
-		respondWithError(w, 401, "incorrect email or password")
+		respondWithHTML(templates.LoginError(), w, r)
 		return
 	}
 
 	refreshToken, err := auth.MakeRefreshToken()
 	if err != nil {
-		respondWithError(w, 401, "incorrect email or password")
+		respondWithHTML(templates.LoginError(), w, r)
 		return
 	}
 
@@ -99,15 +91,23 @@ func (cfg *ApiConfig) UsersLogin(w http.ResponseWriter, r *http.Request) {
 		ExpiresAt: time.Now().UTC().Add(RefreshTokenExpiresInHours),
 	})
 	if err != nil {
-		respondWithError(w, 500, "could not store refresh token")
+		respondWithHTML(templates.LoginError(), w, r)
 		return
 	}
 
-	userWithToken := convertDatabaseUser(userInfo)
-	userWithToken.Token = jwtToken
-	userWithToken.RefreshToken = refreshToken
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_id",
+		Value:    jwtToken,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+		Expires:  time.Now().Add(time.Hour),
+	})
 
-	respondWithJSON(w, 200, userWithToken)
+	userWithToken := convertDatabaseUser(userInfo)
+
+	respondWithHTML(templates.LoginSuccess(userWithToken.Email), w, r)
 
 }
 

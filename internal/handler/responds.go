@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/a-h/templ"
 )
 
 type returnError struct {
@@ -21,6 +23,15 @@ func respondWithError(w http.ResponseWriter, code int, msg string) {
 
 }
 
+func respondWithHTML(c templ.Component, w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+	if err := c.Render(r.Context(), w); err != nil {
+		http.Error(w, "Error rendering template", http.StatusInternalServerError)
+	}
+}
+
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 
 	w.Header().Set("Content-Type", "application/json")
@@ -28,12 +39,15 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	dat, err := json.Marshal(payload)
 	if err != nil {
 		log.Printf("Error marshalling JSON: %s", err)
-		w.WriteHeader(500)
+		http.Error(w, `{"error": "Internal Server Error"}`, http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(code)
-	w.Write(dat)
+
+	if _, err := w.Write(dat); err != nil {
+		log.Printf("Error writing response: %s", err)
+	}
 
 }
 

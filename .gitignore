@@ -1,3 +1,7 @@
+/node_modules
+/templates/*_templ.go
 chirpy
-assets/logo.png
 .env
+cmd.txt
+start.sh
+package-lock.json

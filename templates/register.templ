@@ -1,0 +1,56 @@
+package templates
+
+templ Register(title string){
+	<!doctype html>
+	<html lang="en">
+		@header("Register")
+		<body class="bg-gray-100 flex items-center justify-center min-h-screen">	
+			<div class="bg-white p-8 rounded-lg shadow-md w-80">
+				<h2 class="text-2xl font-bold text-center mb-6"></h2>
+
+				<form class="space-y-4"					
+					hx-post="/api/register"
+					hx-target="#info"
+					hx-swap="innerHTML"
+				>
+					<input 
+						id="email"
+						name="email"
+						type="email" 
+						placeholder="E-Mail"
+						class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+						required
+					>
+
+					<input
+						id="password"
+						name="password"
+						type="password" 
+						placeholder="Password"
+						class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+						required
+					>
+
+					<button 
+						type="submit"
+						class="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition"
+					>Register</button>
+				</form>
+				<div id="info"></div>
+				<p class="pt-4">Already have an account? <a class="text-blue-600" href="/login">Login</a></p>
+			</div>
+		</body>
+	</html>
+}
+
+templ RegisterError() {
+	<p class="mt-4 text-sm text-red-600">
+		User already exists.
+	</p>
+}
+
+templ RegisterSuccess() {
+	<p class="mt-4 text-sm text-green-600">
+		Register successfull!
+	</p>
+}

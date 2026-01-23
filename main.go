@@ -16,7 +16,7 @@ import (
 )
 
 const port = "8080"
-const filepathRoot = "."
+const filepathRoot = "./static"
 
 func main() {
 
@@ -41,15 +41,21 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	fileServerHandler := http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))
-	mux.Handle("/app/", middleware.MetricsInc(apiCfg)(fileServerHandler))
 
-	mux.HandleFunc("GET /api/healthz", handler.Readiness)
-	mux.HandleFunc("GET /admin/metrics", apiCfg.Metric)
+	fileServerHandler := http.StripPrefix("/static/", http.FileServer(http.Dir(filepathRoot)))
 
-	mux.HandleFunc("POST /api/users", apiCfg.UsersCreate)
-	mux.HandleFunc("POST /api/login", apiCfg.UsersLogin)
+	mux.Handle("/static/", middleware.CheckAuth(apiCfg)(fileServerHandler))
+
+	mux.HandleFunc("/", apiCfg.Homepage)
+
+	mux.HandleFunc("GET /healthz", handler.Readiness)
+
+	mux.HandleFunc("POST /api/register", apiCfg.UsersRegisterForm)
+	mux.HandleFunc("POST /api/login", apiCfg.UsersLoginForm)
 	mux.HandleFunc("PUT /api/users", apiCfg.UsersChangeCredentials)
+
+	mux.HandleFunc("GET /register", apiCfg.Register)
+	mux.HandleFunc("GET /login", apiCfg.Login)
 
 	mux.HandleFunc("POST /api/chirps", apiCfg.ChirpsCreate)
 	mux.HandleFunc("GET /api/chirps", apiCfg.ChirpsGetAll)

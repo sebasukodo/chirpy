@@ -20,6 +20,10 @@ WHERE id = $1;
 -- name: DeleteAllUsers :exec
 DELETE FROM users;
 
+-- name: DeleteUserByID :exec
+DELETE FROM users
+WHERE id = $1;
+
 -- name: UpdateUserPassword :exec
 UPDATE users
 SET hashed_password = $2, updated_at = Now()

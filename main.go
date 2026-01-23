@@ -60,6 +60,7 @@ func main() {
 
 	mux.HandleFunc("POST /api/register", apiCfg.UsersRegisterForm)
 	mux.HandleFunc("POST /api/login", apiCfg.UsersLoginForm)
+	mux.Handle("DELETE /api/users/me", apiCfg.MiddlewareCheckAuth(http.HandlerFunc(apiCfg.UsersDelete)))
 
 	mux.Handle("GET /register", apiCfg.MiddlewareCheckAuthLoginPage(http.HandlerFunc(apiCfg.Register)))
 	mux.Handle("GET /login", apiCfg.MiddlewareCheckAuthLoginPage(http.HandlerFunc(apiCfg.Login)))

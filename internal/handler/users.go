@@ -165,6 +165,41 @@ func (cfg *ApiConfig) UsersChangeCredentials(w http.ResponseWriter, r *http.Requ
 
 }
 
+func (cfg *ApiConfig) UsersDelete(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if r.Header.Get("HX-Request") != "true" {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	sessionID, err := r.Cookie("session_id")
+	if err != nil {
+		respondWithError(w, r, 401, "Access denied")
+		return
+	}
+
+	userID, err := cfg.DbQueries.GetSessionIDByID(r.Context(), sessionID.Value)
+	if err != nil {
+		respondWithError(w, r, 401, "Access denied")
+		return
+	}
+
+	if err := cfg.DbQueries.DeleteUserByID(r.Context(), userID.UserID); err != nil {
+		respondWithError(w, r, 500, "Deletion failed")
+		return
+	}
+
+	cfg.RemoveAllCookies(w)
+
+	w.Header().Set("HX-Redirect", "/login")
+	w.WriteHeader(http.StatusSeeOther)
+}
+
 func convertDatabaseUser(dbUser database.User) User {
 	return User{
 		ID:          dbUser.ID,

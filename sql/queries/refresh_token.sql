@@ -25,5 +25,11 @@ SET revoked_at = NOW(), updated_at = NOW()
 WHERE expires_at < NOW();
 
 -- name: RevokeAllRefreshTokensForUser :exec
-DELETE FROM refresh_tokens
+UPDATE refresh_tokens
+SET revoked_at = NOW(), updated_at = NOW()
 WHERE user_id = $1;
+
+-- name: RevokeRefreshTokenByToken :exec
+UPDATE refresh_tokens
+SET revoked_at = NOW(), updated_at = NOW()
+WHERE hashed_token = $1;

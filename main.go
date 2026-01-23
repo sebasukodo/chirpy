@@ -60,10 +60,12 @@ func main() {
 
 	mux.HandleFunc("POST /api/register", apiCfg.UsersRegisterForm)
 	mux.HandleFunc("POST /api/login", apiCfg.UsersLoginForm)
-	mux.HandleFunc("PUT /api/users", apiCfg.UsersChangeCredentials)
 
 	mux.Handle("GET /register", apiCfg.MiddlewareCheckAuthLoginPage(http.HandlerFunc(apiCfg.Register)))
 	mux.Handle("GET /login", apiCfg.MiddlewareCheckAuthLoginPage(http.HandlerFunc(apiCfg.Login)))
+
+	mux.HandleFunc("PUT /api/users", apiCfg.UsersChangeCredentials)
+	mux.HandleFunc("POST /logout", apiCfg.UserLogout)
 
 	mux.HandleFunc("POST /api/chirps", apiCfg.ChirpsCreate)
 	mux.HandleFunc("GET /api/chirps", apiCfg.ChirpsGetAll)
@@ -71,8 +73,7 @@ func main() {
 	mux.HandleFunc("DELETE /api/chirps/{chirpID}", apiCfg.ChirpsDeleteByID)
 
 	mux.HandleFunc("POST /admin/reset", apiCfg.Reset)
-	mux.HandleFunc("POST/api/refresh", apiCfg.RefreshSessionID)
-	mux.HandleFunc("POST /logout", apiCfg.RevokeSessionID)
+
 	mux.HandleFunc("POST /api/polka/webhooks", apiCfg.VIP)
 
 	server := http.Server{

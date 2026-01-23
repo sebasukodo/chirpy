@@ -130,7 +130,6 @@ func (cfg *ApiConfig) MakeSession(userId uuid.UUID, w http.ResponseWriter, r *ht
 
 	sessionID, err := auth.GenerateSecureToken()
 	if err != nil {
-		respondWithHTML(templates.LoginError(), w, r)
 		return database.SessionID{}, err
 	}
 
@@ -140,7 +139,6 @@ func (cfg *ApiConfig) MakeSession(userId uuid.UUID, w http.ResponseWriter, r *ht
 		ExpiresAt: time.Now().UTC().Add(SessionIDExpiresInHours),
 	})
 	if err != nil {
-		respondWithHTML(templates.LoginError(), w, r)
 		return database.SessionID{}, err
 	}
 

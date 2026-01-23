@@ -10,10 +10,6 @@ import (
 	"github.com/sebasukodo/chirpy/templates"
 )
 
-type returnError struct {
-	Error string `json:"error"`
-}
-
 func respondWithError(w http.ResponseWriter, r *http.Request, code int, msg string) {
 
 	w.WriteHeader(code)

@@ -44,12 +44,24 @@ func (q *Queries) RevokeAllExpiredRefreshToken(ctx context.Context) error {
 }
 
 const revokeAllRefreshTokensForUser = `-- name: RevokeAllRefreshTokensForUser :exec
-DELETE FROM refresh_tokens
+UPDATE refresh_tokens
+SET revoked_at = NOW(), updated_at = NOW()
 WHERE user_id = $1
 `
 
 func (q *Queries) RevokeAllRefreshTokensForUser(ctx context.Context, userID uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, revokeAllRefreshTokensForUser, userID)
+	return err
+}
+
+const revokeRefreshTokenByToken = `-- name: RevokeRefreshTokenByToken :exec
+UPDATE refresh_tokens
+SET revoked_at = NOW(), updated_at = NOW()
+WHERE hashed_token = $1
+`
+
+func (q *Queries) RevokeRefreshTokenByToken(ctx context.Context, hashedToken string) error {
+	_, err := q.db.ExecContext(ctx, revokeRefreshTokenByToken, hashedToken)
 	return err
 }
 

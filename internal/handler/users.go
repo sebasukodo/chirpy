@@ -21,8 +21,9 @@ type User struct {
 }
 
 type userAuth struct {
-	Password string `json:"password"`
-	Email    string `json:"email"`
+	Password   string `json:"password"`
+	Email      string `json:"email"`
+	RememberMe string `json:"remember_me"`
 }
 
 func (cfg *ApiConfig) UsersRegisterForm(w http.ResponseWriter, r *http.Request) {
@@ -65,8 +66,9 @@ func (cfg *ApiConfig) UsersRegisterForm(w http.ResponseWriter, r *http.Request) 
 func (cfg *ApiConfig) UsersLoginForm(w http.ResponseWriter, r *http.Request) {
 
 	userLoginRequest := userAuth{
-		Password: r.FormValue("password"),
-		Email:    r.FormValue("email"),
+		Password:   r.FormValue("password"),
+		Email:      r.FormValue("email"),
+		RememberMe: r.FormValue("remember"),
 	}
 
 	userInfo, err := cfg.DbQueries.GetUserByEmail(r.Context(), userLoginRequest.Email)
@@ -87,10 +89,12 @@ func (cfg *ApiConfig) UsersLoginForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = cfg.MakeRefreshToken(userInfo.ID, w, r)
-	if err != nil {
-		respondWithHTML(templates.LoginError(), w, r)
-		return
+	if userLoginRequest.RememberMe == "1" {
+		_, err = cfg.MakeRefreshToken(userInfo.ID, w, r)
+		if err != nil {
+			respondWithHTML(templates.LoginError(), w, r)
+			return
+		}
 	}
 
 	user := convertDatabaseUser(userInfo)

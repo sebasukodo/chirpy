@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -16,6 +17,9 @@ func (cfg *ApiConfig) RotateRefreshToken(w http.ResponseWriter, r *http.Request)
 
 	cookie, err := r.Cookie("refresh_token")
 	if err != nil {
+		if errors.Is(err, http.ErrNoCookie) {
+			return uuid.Nil, nil
+		}
 		return uuid.Nil, err
 	}
 

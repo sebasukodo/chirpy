@@ -43,12 +43,24 @@ func (q *Queries) RevokeAllExpiredSessionIDs(ctx context.Context) error {
 }
 
 const revokeAllSessionsForUser = `-- name: RevokeAllSessionsForUser :exec
-DELETE FROM session_ids
+UPDATE session_ids
+SET revoked_at = NOW(), updated_at = NOW()
 WHERE user_id = $1
 `
 
 func (q *Queries) RevokeAllSessionsForUser(ctx context.Context, userID uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, revokeAllSessionsForUser, userID)
+	return err
+}
+
+const revokeSessionByID = `-- name: RevokeSessionByID :exec
+UPDATE session_ids
+SET revoked_at = NOW(), updated_at = NOW()
+WHERE id = $1
+`
+
+func (q *Queries) RevokeSessionByID(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, revokeSessionByID, id)
 	return err
 }
 

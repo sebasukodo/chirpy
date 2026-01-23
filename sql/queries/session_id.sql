@@ -24,5 +24,11 @@ SET revoked_at = NOW(), updated_at = NOW()
 WHERE expires_at < NOW();
 
 -- name: RevokeAllSessionsForUser :exec
-DELETE FROM session_ids
+UPDATE session_ids
+SET revoked_at = NOW(), updated_at = NOW()
 WHERE user_id = $1;
+
+-- name: RevokeSessionByID :exec
+UPDATE session_ids
+SET revoked_at = NOW(), updated_at = NOW()
+WHERE id = $1;

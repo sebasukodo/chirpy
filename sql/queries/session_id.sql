@@ -13,7 +13,7 @@ RETURNING *;
 SELECT * FROM session_ids
 WHERE id = $1;
 
--- name: SetSessionIDInvalid :one
+-- name: SetSessionIDInvalid :exec
 UPDATE session_ids
 SET revoked_at = NOW(), updated_at = NOW()
 WHERE id = $1

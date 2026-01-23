@@ -1,0 +1,30 @@
+package templates
+
+templ ProfilePage() {
+	<!doctype html>
+	<html lang="en">
+		@header("Profile")
+		<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+			<div class="bg-white p-8 rounded-lg shadow-md w-80 text-center">
+				<h2 class="text-2xl font-bold mb-4">
+					You are now logged in!
+				</h2>
+
+				<p class="text-gray-600 mb-6">
+					Welcome to your profile page.
+				</p>
+
+				<div>
+					<button
+                        id="logoutButton"
+                        hx-post="/logout"
+                        hx-trigger="click"
+						type="button"
+						class="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded transition"
+					>Log out
+					</button>
+				</div>
+			</div>
+		</body>
+	</html>
+}

@@ -43,13 +43,22 @@ func (cfg *ApiConfig) UsersRegisterForm(w http.ResponseWriter, r *http.Request) 
 		HashedPassword: hashed,
 	}
 
-	_, err = cfg.DbQueries.CreateUser(r.Context(), userInfoParams)
+	user, err := cfg.DbQueries.CreateUser(r.Context(), userInfoParams)
 	if err != nil {
 		respondWithHTML(templates.RegisterError(), w, r)
 		return
 	}
 
-	respondWithHTML(templates.RegisterSuccess(), w, r)
+	w, _, err = cfg.MakeSession(user, w, r)
+	if err != nil {
+		respondWithHTML(templates.RegisterErrorSession(), w, r)
+		return
+	}
+
+	w.Header().Set("HX-Reswap", "outerHTML")
+	w.Header().Set("HX-Retarget", "body")
+
+	respondWithHTML(templates.RegisterSuccess(""), w, r)
 
 }
 
@@ -72,33 +81,16 @@ func (cfg *ApiConfig) UsersLoginForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sessionID, err := auth.MakeSessionID()
+	w, _, err = cfg.MakeSession(userInfo, w, r)
 	if err != nil {
 		respondWithHTML(templates.LoginError(), w, r)
 		return
 	}
-
-	_, err = cfg.DbQueries.StoreSessionID(r.Context(), database.StoreSessionIDParams{
-		ID:        sessionID,
-		UserID:    userInfo.ID,
-		ExpiresAt: time.Now().UTC().Add(SessionIDExpiresInHours),
-	})
-	if err != nil {
-		respondWithHTML(templates.LoginError(), w, r)
-		return
-	}
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session_id",
-		Value:    sessionID,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
-		Expires:  time.Now().UTC().Add(SessionIDExpiresInHours),
-	})
 
 	user := convertDatabaseUser(userInfo)
+
+	w.Header().Set("HX-Reswap", "outerHTML")
+	w.Header().Set("HX-Retarget", "body")
 
 	respondWithHTML(templates.LoginSuccess(user.Email), w, r)
 

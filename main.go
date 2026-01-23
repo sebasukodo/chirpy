@@ -12,7 +12,6 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/sebasukodo/chirpy/internal/database"
 	"github.com/sebasukodo/chirpy/internal/handler"
-	"github.com/sebasukodo/chirpy/internal/middleware"
 )
 
 const port = "8080"
@@ -44,9 +43,9 @@ func main() {
 
 	fileServerHandler := http.StripPrefix("/static/", http.FileServer(http.Dir(filepathRoot)))
 
-	mux.Handle("/static/", middleware.CheckAuth(apiCfg)(fileServerHandler))
+	mux.Handle("/static/", fileServerHandler)
 
-	mux.HandleFunc("/", apiCfg.Homepage)
+	mux.Handle("/profile", apiCfg.MiddlewareCheckAuth(http.HandlerFunc(apiCfg.ProfilePage)))
 
 	mux.HandleFunc("GET /healthz", handler.Readiness)
 
@@ -54,8 +53,8 @@ func main() {
 	mux.HandleFunc("POST /api/login", apiCfg.UsersLoginForm)
 	mux.HandleFunc("PUT /api/users", apiCfg.UsersChangeCredentials)
 
-	mux.HandleFunc("GET /register", apiCfg.Register)
-	mux.HandleFunc("GET /login", apiCfg.Login)
+	mux.Handle("GET /register", apiCfg.MiddlewareCheckAuthLoginPage(http.HandlerFunc(apiCfg.Register)))
+	mux.Handle("GET /login", apiCfg.MiddlewareCheckAuthLoginPage(http.HandlerFunc(apiCfg.Login)))
 
 	mux.HandleFunc("POST /api/chirps", apiCfg.ChirpsCreate)
 	mux.HandleFunc("GET /api/chirps", apiCfg.ChirpsGetAll)
@@ -64,7 +63,7 @@ func main() {
 
 	mux.HandleFunc("POST /admin/reset", apiCfg.Reset)
 	mux.HandleFunc("POST/api/refresh", apiCfg.RefreshSessionID)
-	mux.HandleFunc("POST /api/revoke", apiCfg.RevokeSessionID)
+	mux.HandleFunc("POST /logout", apiCfg.RevokeSessionID)
 	mux.HandleFunc("POST /api/polka/webhooks", apiCfg.VIP)
 
 	server := http.Server{

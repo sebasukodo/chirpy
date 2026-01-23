@@ -23,10 +23,9 @@ func (cfg *ApiConfig) Register(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (cfg *ApiConfig) Homepage(w http.ResponseWriter, r *http.Request) {
+func (cfg *ApiConfig) ProfilePage(w http.ResponseWriter, r *http.Request) {
 
-	c := templates.HomepageContent()
-	if err := templates.Layout(c, "Chirpy - short messages").Render(r.Context(), w); err != nil {
+	if err := templates.ProfilePage().Render(r.Context(), w); err != nil {
 		respondWithError(w, r, 500, "Error")
 		return
 	}

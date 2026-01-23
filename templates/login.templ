@@ -5,7 +5,7 @@ templ Login(title string){
 	<html lang="en">
 		@header("Login")
 		<body class="bg-gray-100 flex items-center justify-center min-h-screen">	
-			<div class="bg-white p-8 rounded-lg shadow-md w-80">
+			<div id="body" class="bg-white p-8 rounded-lg shadow-md w-80">
 				<h2 class="text-2xl font-bold text-center mb-6">Welcome back!</h2>
 
 				<form class="space-y-4"					
@@ -50,7 +50,12 @@ templ LoginError() {
 }
 
 templ LoginSuccess(user string) {
-	<p class="mt-4 text-sm text-green-600">
-		Welcome back { user }!
-	</p>
+	<div><meta http-equiv="refresh" content="2; url=/profile"></div>
+	<div class="bg-white p-8 rounded-lg shadow-md w-80">
+		<h2 class="text-2xl font-bold text-center mb-6">Welcome back</h2>
+		<br>
+		<h2 class="text-2x1 font-bold text-center mb-6">{ user }!</h2>
+		<br>
+		<p>You are getting redirected...</p>
+	</div>
 }

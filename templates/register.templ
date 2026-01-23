@@ -5,7 +5,7 @@ templ Register(title string){
 	<html lang="en">
 		@header("Register")
 		<body class="bg-gray-100 flex items-center justify-center min-h-screen">	
-			<div class="bg-white p-8 rounded-lg shadow-md w-80">
+			<div id="body" class="bg-white p-8 rounded-lg shadow-md w-80">
 				<h2 class="text-2xl font-bold text-center mb-6">Register Now!</h2>
 
 				<form class="space-y-4"					
@@ -45,12 +45,23 @@ templ Register(title string){
 
 templ RegisterError() {
 	<p class="mt-4 text-sm text-red-600">
-		User already exists.
+		User already exists
 	</p>
 }
 
-templ RegisterSuccess() {
-	<p class="mt-4 text-sm text-green-600">
-		Register successfull!
+templ RegisterErrorSession() {
+	<p class="mt-4 text-sm text-red-600">
+		User successfully registered, but could not create session. Please <a href="/login">Login</a>!
 	</p>
+}
+
+templ RegisterSuccess(user string) {
+	<div><meta http-equiv="refresh" content="2; url=/profile"></div>
+	<div class="bg-white p-8 rounded-lg shadow-md w-80">
+		<h2 class="text-2xl font-bold text-center mb-6">Welcome to Chripy!</h2>
+		<br>
+		<h2 class="text-2x1 font-bold text-center mb-6">{ user }!</h2>
+		<br>
+		<p>You are getting redirected in 3 seconds...</p>
+	</div>
 }

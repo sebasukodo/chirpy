@@ -31,25 +31,16 @@ func (q *Queries) GetSessionIDByID(ctx context.Context, id string) (SessionID, e
 	return i, err
 }
 
-const setSessionIDInvalid = `-- name: SetSessionIDInvalid :one
+const setSessionIDInvalid = `-- name: SetSessionIDInvalid :exec
 UPDATE session_ids
 SET revoked_at = NOW(), updated_at = NOW()
 WHERE id = $1
 RETURNING id, created_at, updated_at, user_id, expires_at, revoked_at
 `
 
-func (q *Queries) SetSessionIDInvalid(ctx context.Context, id string) (SessionID, error) {
-	row := q.db.QueryRowContext(ctx, setSessionIDInvalid, id)
-	var i SessionID
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.UserID,
-		&i.ExpiresAt,
-		&i.RevokedAt,
-	)
-	return i, err
+func (q *Queries) SetSessionIDInvalid(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, setSessionIDInvalid, id)
+	return err
 }
 
 const storeSessionID = `-- name: StoreSessionID :one

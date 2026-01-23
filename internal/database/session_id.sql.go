@@ -31,11 +31,31 @@ func (q *Queries) GetSessionIDByID(ctx context.Context, id string) (SessionID, e
 	return i, err
 }
 
+const revokeAllExpiredSessionIDs = `-- name: RevokeAllExpiredSessionIDs :exec
+UPDATE session_ids
+SET revoked_at = NOW(), updated_at = NOW()
+WHERE expires_at < NOW()
+`
+
+func (q *Queries) RevokeAllExpiredSessionIDs(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, revokeAllExpiredSessionIDs)
+	return err
+}
+
+const revokeAllSessionsForUser = `-- name: RevokeAllSessionsForUser :exec
+DELETE FROM session_ids
+WHERE user_id = $1
+`
+
+func (q *Queries) RevokeAllSessionsForUser(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, revokeAllSessionsForUser, userID)
+	return err
+}
+
 const setSessionIDInvalid = `-- name: SetSessionIDInvalid :exec
 UPDATE session_ids
 SET revoked_at = NOW(), updated_at = NOW()
 WHERE id = $1
-RETURNING id, created_at, updated_at, user_id, expires_at, revoked_at
 `
 
 func (q *Queries) SetSessionIDInvalid(ctx context.Context, id string) error {

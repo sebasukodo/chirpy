@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -37,6 +38,14 @@ func main() {
 		Platform:       os.Getenv("PLATFORM"),
 		TokenSecret:    os.Getenv("TOKENSECRET"),
 		PolkaApiKey:    os.Getenv("POLKA_KEY"),
+	}
+
+	if err := apiCfg.DbQueries.RevokeAllExpiredSessionIDs(context.Background()); err != nil {
+		log.Printf("startup session id cleanup failed: %v", err)
+	}
+
+	if err := apiCfg.DbQueries.RevokeAllExpiredRefreshToken(context.Background()); err != nil {
+		log.Printf("startup refresh token cleanup failed: %v", err)
 	}
 
 	mux := http.NewServeMux()

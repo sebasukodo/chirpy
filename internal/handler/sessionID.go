@@ -5,12 +5,13 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/sebasukodo/chirpy/internal/auth"
 	"github.com/sebasukodo/chirpy/internal/database"
 	"github.com/sebasukodo/chirpy/templates"
 )
 
-const SessionIDExpiresInHours = time.Duration(60*24) * time.Hour
+const SessionIDExpiresInHours = time.Duration(2) * time.Hour
 
 func (cfg *ApiConfig) RefreshSessionID(w http.ResponseWriter, r *http.Request) {
 
@@ -36,7 +37,7 @@ func (cfg *ApiConfig) RefreshSessionID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newSessionID, err := auth.MakeSessionID()
+	newSessionID, err := auth.GenerateSecureToken()
 	if err != nil {
 		respondWithError(w, r, 500, "Could not refresh session")
 		return
@@ -90,7 +91,7 @@ func (cfg *ApiConfig) RevokeSessionID(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
-		Expires:  time.Unix(0, 0),
+		MaxAge:   -1,
 	})
 
 	w.Header().Set("HX-Redirect", "/login")
@@ -125,22 +126,22 @@ func (cfg *ApiConfig) ValidateSessionID(w http.ResponseWriter, r *http.Request) 
 
 }
 
-func (cfg *ApiConfig) MakeSession(userInfo database.User, w http.ResponseWriter, r *http.Request) (http.ResponseWriter, database.SessionID, error) {
+func (cfg *ApiConfig) MakeSession(userId uuid.UUID, w http.ResponseWriter, r *http.Request) (database.SessionID, error) {
 
-	sessionID, err := auth.MakeSessionID()
+	sessionID, err := auth.GenerateSecureToken()
 	if err != nil {
 		respondWithHTML(templates.LoginError(), w, r)
-		return w, database.SessionID{}, err
+		return database.SessionID{}, err
 	}
 
 	session, err := cfg.DbQueries.StoreSessionID(r.Context(), database.StoreSessionIDParams{
 		ID:        sessionID,
-		UserID:    userInfo.ID,
+		UserID:    userId,
 		ExpiresAt: time.Now().UTC().Add(SessionIDExpiresInHours),
 	})
 	if err != nil {
 		respondWithHTML(templates.LoginError(), w, r)
-		return w, database.SessionID{}, err
+		return database.SessionID{}, err
 	}
 
 	http.SetCookie(w, &http.Cookie{
@@ -153,6 +154,6 @@ func (cfg *ApiConfig) MakeSession(userInfo database.User, w http.ResponseWriter,
 		Expires:  time.Now().UTC().Add(SessionIDExpiresInHours),
 	})
 
-	return w, session, nil
+	return session, nil
 
 }

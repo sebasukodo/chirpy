@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/alexedwards/argon2id"
@@ -13,6 +15,11 @@ func HashPassword(password string) (string, error) {
 	}
 
 	return hash, nil
+}
+
+func HashToken(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
 }
 
 func CheckPasswordHash(password string, hash string) (bool, error) {

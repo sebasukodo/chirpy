@@ -1,7 +1,12 @@
--- +goose UP
-ALTER TABLE refresh_tokens RENAME TO session_ids;
-ALTER TABLE session_ids RENAME COLUMN token TO id;
+-- +goose Up
+CREATE TABLE session_ids(
+    id TEXT PRIMARY KEY,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at TIMESTAMP NOT NULL,
+    revoked_at TIMESTAMP
+);
 
 -- +goose Down
-ALTER TABLE session_ids RENAME COLUMN id TO token;
-ALTER TABLE session_ids RENAME TO refresh_tokens;
+DROP TABLE session_ids;

@@ -49,7 +49,7 @@ func (cfg *ApiConfig) UsersRegisterForm(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	w, _, err = cfg.MakeSession(user, w, r)
+	_, err = cfg.MakeSession(user.ID, w, r)
 	if err != nil {
 		respondWithHTML(templates.RegisterErrorSession(), w, r)
 		return
@@ -81,7 +81,13 @@ func (cfg *ApiConfig) UsersLoginForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w, _, err = cfg.MakeSession(userInfo, w, r)
+	_, err = cfg.MakeSession(userInfo.ID, w, r)
+	if err != nil {
+		respondWithHTML(templates.LoginError(), w, r)
+		return
+	}
+
+	_, err = cfg.MakeRefreshToken(userInfo.ID, w, r)
 	if err != nil {
 		respondWithHTML(templates.LoginError(), w, r)
 		return

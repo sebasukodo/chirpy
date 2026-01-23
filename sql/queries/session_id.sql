@@ -16,5 +16,13 @@ WHERE id = $1;
 -- name: SetSessionIDInvalid :exec
 UPDATE session_ids
 SET revoked_at = NOW(), updated_at = NOW()
-WHERE id = $1
-RETURNING *;
+WHERE id = $1;
+
+-- name: RevokeAllExpiredSessionIDs :exec
+UPDATE session_ids
+SET revoked_at = NOW(), updated_at = NOW()
+WHERE expires_at < NOW();
+
+-- name: RevokeAllSessionsForUser :exec
+DELETE FROM session_ids
+WHERE user_id = $1;
